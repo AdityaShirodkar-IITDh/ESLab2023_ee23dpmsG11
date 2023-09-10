@@ -37,6 +37,7 @@ void PortFConfig(void)
 void IntPortFHandler(void)
 {
     GPIO_PORTF_ICR_R = Mask_Bits;           //Clear any previous interrupts on port F
+    GPIO_PORTF_IM_R &= ~Mask_Bits;
     STCURRENT=0x00;                         //Reinitialise Systick Counter to Zero
 
     STRELOAD = 16*1000000;
@@ -76,3 +77,4 @@ int main(void)
     while(1);
 
 }
+
