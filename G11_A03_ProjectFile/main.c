@@ -15,7 +15,8 @@
 
 void Delay(int us)
 {
-    STRELOAD = us*15;                       // reload value for 'us' microseconds
+    STCURRENT = 0;
+    STRELOAD = us*16;                       // reload value for 'us' microseconds
     STCTRL |= (CLKINT | ENABLE);        // set internal clock, enable the timer
 
     while ((STCTRL & COUNT_FLAG) == 0)  // wait until flag is set
@@ -37,9 +38,10 @@ int main(void)
 
     while(1){
      GPIO_PORTF_DATA_R = 0X0E;          /* White */
-     Delay(800);
-     GPIO_PORTF_DATA_R = 0X00;          /* Dark */
      Delay(200);
+     GPIO_PORTF_DATA_R = 0X00;          /* Dark */
+     Delay(800);
     }
     return 0;
 }
+
