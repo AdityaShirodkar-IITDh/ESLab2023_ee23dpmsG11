@@ -38,7 +38,8 @@ int main(void)
 
     while(1){
      GPIO_PORTF_DATA_R = 0X0E;          /* White */
-     Delay(200);
+     Delay(200);			//Original Delay
+     //Delay(200-9);			//Modified Delay     
      GPIO_PORTF_DATA_R = 0X00;          /* Dark */
      Delay(800);
     }
