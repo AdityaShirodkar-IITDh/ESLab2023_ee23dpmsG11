@@ -5,6 +5,10 @@
  */
 
 /*
+1.
+Press Button, LED red, or else off
+
+2.
 Press button, LED: R->B->G (cycle), Implement debounce
 */
 #include <stdint.h>
@@ -27,15 +31,22 @@ int main(void)
     int j;
 
     while(1){
-        for(j = 0; j <5000; j++){}               //Debounce Delay
 
         sw_new= !(GPIO_PORTF_DATA_R & 0x10);    //Take current switch value
 
+        //Rising Edge of Switch signal
         if(sw_new>sw_old)                       //Check for positive edge trigger
         {
             i++;
             if(i==4)
             {i=1;}
+            for(j = 0; j <2000; j++){}           //Debounce Delay
+        }
+
+        //Falling Edge of Switch signal
+        if(sw_new<sw_old)                       //Check for negative edge trigger
+        {
+            for(j = 0; j <2000; j++){}           //Debounce Delay
         }
 
         if(i==1)
@@ -50,3 +61,4 @@ int main(void)
     }
     return 0;
 }
+
