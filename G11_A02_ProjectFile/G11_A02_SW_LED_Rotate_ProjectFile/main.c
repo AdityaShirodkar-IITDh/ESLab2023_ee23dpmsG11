@@ -40,13 +40,13 @@ int main(void)
             i++;
             if(i==4)
             {i=1;}
-            for(j = 0; j <2000; j++){}           //Debounce Delay
+            for(j = 0; j <5000; j++){}           //Debounce Delay
         }
 
         //Falling Edge of Switch signal
         if(sw_new<sw_old)                       //Check for negative edge trigger
         {
-            for(j = 0; j <2000; j++){}           //Debounce Delay
+            for(j = 0; j <5000; j++){}           //Debounce Delay
         }
 
         if(i==1)
