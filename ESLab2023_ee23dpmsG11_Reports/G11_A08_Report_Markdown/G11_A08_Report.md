@@ -205,7 +205,7 @@ The transmit logic performs parallel-to-serial conversion on the data read from 
  * The data is sent LSB first, hence 01010101 is sent
  * Hence, the waveform to be observed would be 01010101_1_1 (DataBits_ParityBit_StopBit)
 
- <img src="images/uart_waveforms.jpeg" alt="Oscilloscope Waveform" width="250"/>
+ <img src="images/uart_waveform_final.jpeg" alt="Oscilloscope Waveform" width="300"/>
 
 *0xAA transmitted and waveform captured on oscilloscope*
 
