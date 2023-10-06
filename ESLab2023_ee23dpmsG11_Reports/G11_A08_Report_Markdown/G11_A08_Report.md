@@ -205,20 +205,20 @@ The transmit logic performs parallel-to-serial conversion on the data read from 
  * The data is sent LSB first, hence 01010101 is sent
  * Hence, the waveform to be observed would be 01010101_1_1 (DataBits_ParityBit_StopBit)
 
- <img src="images/uart_waveform_final.jpeg" alt="Oscilloscope Waveform" width="300"/>
+ <img src="images/uart_waveform_final.jpeg" alt="Oscilloscope Waveform" width="500"/>
 
 *0xAA transmitted and waveform captured on oscilloscope*
 
 It is seen that the transmitted is signal aligns with the theoretically calculated signal.
 
-<img src="images/uart_blue.jpeg" alt="0xF0, Blue LED" width="250"/>
+<img src="images/uart_blue.jpeg" alt="0xF0, Blue LED" width="300"/>
 
 *Pressing user switch 1, Tx and Rx of 0xF0, and glowing of Blue LED*
 
-<img src="images/uart_green.jpeg" alt="0xAA, Green LED" width="250"/>
+<img src="images/uart_green.jpeg" alt="0xAA, Green LED" width="300"/>
 
 *Pressing user switch 2, Tx and Rx of 0xAA, and glowing of Green LED*
 
-<img src="images/uart_red.jpeg" alt="Noise/Error, Red LED" width="250"/>
+<img src="images/uart_red.jpeg" alt="Noise/Error, Red LED" width="300"/>
 
 *Recieving noise/error signal, and glowing of Red LED*
