@@ -25,7 +25,7 @@ The program to be implemented is as follows:
 ## Algorithm:
 The algorithm for implementing UART based task is depicted in the state diagram below:
 
-<img src="images/uart_leds_stateflow.png" alt="Stateflow diagram for UART" width="250"/>
+<img src="images/uart_leds_stateflow.png" alt="Stateflow diagram for UART" width="650"/>
 
 *Stateflow diagram for UART application*
 
