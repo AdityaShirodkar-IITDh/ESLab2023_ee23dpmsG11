@@ -1,291 +1,224 @@
-# Lab 7: PWM Generation with real time varying duty cycle
+# Lab 8: UART implementation using TM4C123GH6PM microcontroller
 
 Group 11: EE23DP001 Aditya Shirodkar; EE23MS006 Prasanth Pithanisetty
 
 ## Aim:
-To Generate PWM signals which can be varied in real-time using user switches.
-The programs to be implemented are as follows:
-1. Create a PWM signal on 100KHz with an initial duty cycle of 50%. On pressing one user switch, the duty cycle should increase by 5%, while on pressing the other, the duty cycle should decrease by 5%.
-2. Create a PWM signal on 100KHz with an initial duty cycle of 50%. On pressing a user switch for a short duration, the duty cycle should increase by 5%, while for a long press, the duty cycle should decrease by 5%.
+To implement UART based communication on the TM4C123GH6PM microcontroller and verify the same.
+The program to be implemented is as follows:
+* Configure the TM4C123GH6PM to enable UART communication at 9600 baud rate with odd parity
+* If user switch 1 is pressed, 0xAA should be transmitted
+* If user switch 2 is pressed, 0xF0 should be transmitted
+* If 0xAA is recieved, Green LED should toggle ON
+* If 0xF0 is recieved, Blue LED should toggle ON
+* If any error is detected, Red LED should toggle ON
 
 ## Procedure:
-PWM signal generation is done on Port F, Pin PF2 (Connected to onboard Blue LED).
-1. Enable clock to GPIO Port F
-2. Configure Port F such that onboard LEDs are inputs and onboard user switches are outputs
-3. Configure interrupts for Port F
-4. Enable clock to PWM module
-5. Configure pin PF2 for PWM functionality
-6. Configure PWM module registers to generate the desired PWM signal on port F
-7. Configure Systick and its interrupt (for task 2)
+1. Configure Port F such that both user switches serve as inputs and onboard LEDs serve as outputs.
+2. Configure pins PE4 and PE5 of Port E, such that
+	* PE4 serves as the Rx pin, PE5 serves as the Tx pin
+3. Configure the appropriate registers of UART Module 5 (UART module correspondng to the required pins) to generated the required baud rate and implement odd parity.  
+4. Enbale interrupts for both UART as well as user switches and assign appropriate priority levels to the same.
+5. Configure Systick to toggle LED for desired duration before clearing interrupts.
 
-## PWM Generation:
-The TM4C123GH6PM microcontroller contains two PWM modules, each with four PWM generator blocks and a control block, for a total of 16 PWM outputs. The control block determines the polarity of the PWM signals, and which signals are passed through to the pins. Each PWM generator block produces two PWM signals that share the same timer and frequency and can either be programmed with independent actions or as a single pair of complementary signals with dead-band delays inserted.
+## UART Protocol on TM4C123GH6PM:
 
-## Algorithms:
-Each algorithm incorporates debounce inorder to prevent unnecessary triggering of duty cycle change.
+## Algorithm:
+The algorithm for implementing UART based task is depicted in the state diagram below:
 
-### Task 1 (2 user switches):
-* User Switch 1 decreases duty cycle by 5%, User Switch 2 increases duty cycle by 5%.
-* Pressing any user switch triggers an interrupt, and based on the particular switch pressed, further action is taken.
-* Duty cycle range is limited between 5% and 95%.
+<img src="images/uart_leds_stateflow.png" alt="Stateflow diagram for UART" width="250"/>
 
-![State Diagram of Task 1](images/EmbSys_2SwitchDuty_StateDiag.png)
+*Stateflow diagram for UART application*
 
-*State Diagram of Task 1*
+The use of interrupts and systick enables the processor to be available for additional tasks if necessary, as compared to polling based implementation.
 
-### Task 2 (1 user switch):
-* User Switch short press increases duty cycle by 5%, User Switch long press decreases duty cycle by 5%.
-* Pressing any user switch triggers an interrupt, where systick is enabled with a count duration of 1 second.
-* When systick counts to zero, an interrupt is triggered. Here, the user switch position is checked.
-	- If switch is still being pressed, long press action is triggered
-	- if switch has been released, short press action is triggered 
-* Duty cycle range is limited between 5% and 95%.
-* The algorithm works on pressing any user switch. A particular user switch can be defined for this program if required.
+## Code:
 
-![State Diagram of Task 2](images/EmbSys_1SwitchDuty_StateDiag.png)
-
-*State Diagram of Task 2*
-
-## Codes:
-### Task 1 (2 user switches):
+	/*
+	* UART with baud rate 9600 and odd parity.
+	* "F0" if SW1 is pressed
+	* "AA" if SW2 is pressed
+	* if "AA" is received LED should be GREEN;
+	* if "F0" is recieved, the LED should be BLUE
+	* if any error is detected LED should be RED
+	*
+	* Using PE4, PE5; UART Module 5
+	* PE4 = Rx; PE5 = Tx
+	*/
 
 	#include <stdint.h>
 	#include <stdbool.h>
 	#include "tm4c123gh6pm.h"
 
-	//Using M1PWM6, on Pin PF2; controlled by M1PWM6, controlled by Module 1 PWM Generator 3.
-
-	void PortFConfig(void);
-	void PWMConfig(void);
-	void two_switch(void);
-	//void GPIOF_Handler(void);
-
-	#define frequency 100000
-	#define time_period (16000000/frequency)
-	#define del_duty 5
-	volatile int duty;
-
 	#define Sw_Bits 0x11
+	#define S1_data 0xF0
+	#define S2_data 0xAA
 
+	#define Red 0X02
+	#define Blue 0X04
+	#define Green 0X08
 
-	void main(void)
+	void PortF_Config(void);
+	void UART_Config(void);
+	void PortF_Handler(void);
+	void UART_Handler(void);
+	void Systick_Handler(void);
 
-	{
-	    PortFConfig();
-	    PWMConfig();
-	    duty=50;
-	    PWM1_3_CMPA_R = (time_period * duty) / 100;     //Provide initial duty to pwm
-	    while(1){}
-	}
-
-	void PortFConfig(void)
-	{
-	    SYSCTL_RCGCGPIO_R |= (1<<5);        //Enable and provide a clock to GPIO Port F
-	    GPIO_PORTF_LOCK_R = 0x4C4F434B;     //Unlock PortF register
-	    GPIO_PORTF_CR_R = 0x1F;             //Enable Commit function
-
-	    GPIO_PORTF_PUR_R = 0x11;            //Pull-up for user switches
-	    GPIO_PORTF_DEN_R = 0x1F;            //Enable all pins on port F
-	    GPIO_PORTF_DIR_R = 0x0E;            //Define PortF LEDs as output and switches as input
-
-	    //PortF Interrupt Configurations: User Sw should trigger hardware interrupt
-	    GPIO_PORTF_IS_R &= ~Sw_Bits;        //Edge trigger detected
-	    GPIO_PORTF_IBE_R &= ~Sw_Bits;       //Trigger interrupt according to GPIOIEV
-	    GPIO_PORTF_IEV_R &= ~Sw_Bits;       //Trigger interrupt on falling edge
-	    GPIO_PORTF_IM_R &= ~Sw_Bits;        //Mask interrupt bits
-	    GPIO_PORTF_ICR_R |= Sw_Bits;        //clear any prior interrupts
-	    GPIO_PORTF_IM_R |= Sw_Bits;         //enable interrupts for bits corresponding to Mask_Bits
-
-	    //NVIC Configuration
-	    //PortF interrupts correspond to interrupt 30 (EN0 and PRI7 registers)
-	    NVIC_EN0_R |= (1<<30);              //Interrupts enabled for port F
-	    NVIC_PRI7_R &= 0xFF3FFFFF;          //Interrupt Priority 1 to Port F
-	}
-
-	void PWMConfig(void)
-	{
-	    SYSCTL_RCGCPWM_R |= (1<<1);     //Enable and provide a clock to PWM module 1
-	    GPIO_PORTF_AFSEL_R |= (1<<2);   //Enable Alternate function for PF2
-	    GPIO_PORTF_PCTL_R |= 0x500;     //Selecting PWM function for PF2 (Page 1351)
-
-	    PWM1_3_CTL_R |= 0x00;
-	    PWM1_3_GENA_R = 0x8C;          //Configure PWM Gen A such that PWMA is High when counter=LOAD and low when counter=CMPA when counting down
-	    PWM1_3_LOAD_R = time_period;
-	    PWM1_3_CMPA_R = (duty/100)*time_period - 1;
-	    PWM1_3_CTL_R |= 0x01;
-	    PWM1_ENABLE_R |= 0x040;
-	}
-
-	void GPIOF_Handler(void)
-	{
-	    two_switch();
-
-	    int j;
-	    for(j = 0; j <1600*1000/4; j++){}           //Debounce Delay of 0.25seconds
-
-	    GPIO_PORTF_ICR_R = Sw_Bits;
-	    GPIO_PORTF_IM_R |= Sw_Bits;
-	}
-
-	void two_switch(void)
-	{
-	    GPIO_PORTF_IM_R &= ~Sw_Bits;
-
-		if(GPIO_PORTF_RIS_R & 0x10)    //Usr Sw 1
-		{
-		    if (duty < 95)
-		           {
-		               duty = duty + del_duty;
-		           }
-		}
-		else if (GPIO_PORTF_RIS_R & 0x01)    //Usr Sw 2
-		{
-		    if (duty > 5)
-		           {
-		               duty = duty - del_duty;
-		           }
-		}
-		PWM1_3_CMPA_R = (time_period * duty) / 100;
-	}
-
-### Task 2 (1 user switch):
-
-	#include <stdint.h>
-	#include <stdbool.h>
-	#include "tm4c123gh6pm.h"
-
-	//Using M1PWM6, on Pin PF2; controlled by M1PWM6, controlled by Module 1 PWM Generator 3.
-
-	void PortFConfig(void);
-	void PWMConfig(void);
-	void one_switch(void);
-	void GPIOF_Handler(void);
-	void SysTick_Handler(void);
-
-	#define frequency 100000
-	#define time_period (16000000/frequency)
-	#define del_duty 5
-	volatile int duty;
-
-	#define Sw_Bits 0x11
-
-	//Systick Stuff
 	#define STCTRL *((volatile long *) 0xE000E010)      //Control and Status Register
 	#define STRELOAD *((volatile long *) 0xE000E014)   //SysTick Reload Value Register
 	#define STCURRENT *((volatile long *) 0xE000E018)  //SysTick Current Value Register
 
 	//Definitions to configure systick CSR(Control and Status Register)
 	#define ENABLE (1<<0)       //bit 0 of CSR enables systick counter
-	#define DISABLE (1<<0)       //bit 0 of CSR disables systick counter
 	#define INT_EN (1<<1)       //bit 1 of CSR to generate interrupt to the NVIC when SysTick counts to 0
 	#define Clk_SRC (1<<2)      //bit 2 of CSR to select system clock
 	#define COUNT_FLAG (1<<16)  //bit 16 of CSR; The SysTick timer has counted to 0 since the last time this bit was read.
 
 	void main(void)
-
 	{
-	    PortFConfig();
-	    PWMConfig();
-	    duty=50;
-	    PWM1_3_CMPA_R = (time_period * duty) / 100;     //Provide initial duty to pwm
-	    while(1){}
+		SYSCTL_RCGCGPIO_R |= (1<<5);        //Enable and provide a clock to GPIO Port E
+		SYSCTL_RCGCUART_R |= (1<<5);      //Enable and provide a clock to UART module 5 in Run mode
+		SYSCTL_RCGCGPIO_R |= (1<<4);      //Enable and provide a clock to GPIO Port E
+
+		UART_Config();
+		PortF_Config();
+
+		while(1){}
 	}
 
-	void PortFConfig(void)
+	void PortF_Config(void)
 	{
-	    SYSCTL_RCGCGPIO_R |= (1<<5);        //Enable and provide a clock to GPIO Port F
-	    GPIO_PORTF_LOCK_R = 0x4C4F434B;     //Unlock PortF register
-	    GPIO_PORTF_CR_R = 0x1F;             //Enable Commit function
+		GPIO_PORTF_LOCK_R = 0x4C4F434B;     //Unlock PortF register
+		GPIO_PORTF_CR_R = 0x1F;             //Enable Commit function
 
-	    GPIO_PORTF_PUR_R = 0x11;            //Pull-up for user switches
-	    GPIO_PORTF_DEN_R = 0x1F;            //Enable all pins on port F
-	    GPIO_PORTF_DIR_R = 0x0E;            //Define PortF LEDs as output and switches as input
+		GPIO_PORTF_PUR_R = 0x11;            //Pull-up for user switches
+		GPIO_PORTF_DEN_R = 0x1F;            //Enable all pins on port F
+		GPIO_PORTF_DIR_R = 0x0E;            //Define PortF LEDs as output and switches as input
 
-	    //PortF Interrupt Configurations: User Sw should trigger hardware interrupt
-	    GPIO_PORTF_IS_R &= ~Sw_Bits;        //Edge trigger detected
-	    GPIO_PORTF_IBE_R &= ~Sw_Bits;     //Trigger interrupt according to GPIOIEV
-	    GPIO_PORTF_IEV_R &= ~Sw_Bits;     //Trigger interrupt on falling edge
-	    GPIO_PORTF_IM_R &= ~Sw_Bits;        //Mask interrupt bits
-	    GPIO_PORTF_ICR_R |= Sw_Bits;        //clear any prior interrupts
-	    GPIO_PORTF_IM_R |= Sw_Bits;         //enable interrupts for bits corresponding to Mask_Bits
+		//PortF Interrupt Configurations: User Sw should trigger hardware interrupt
+		GPIO_PORTF_IS_R &= ~Sw_Bits;        //Edge trigger detected
+		GPIO_PORTF_IBE_R &= ~Sw_Bits;       //Trigger interrupt according to GPIOIEV
+		GPIO_PORTF_IEV_R &= ~Sw_Bits;       //Trigger interrupt on falling edge
+		GPIO_PORTF_IM_R &= ~Sw_Bits;        //Mask interrupt bits
+		GPIO_PORTF_ICR_R |= Sw_Bits;        //clear any prior interrupts
+		GPIO_PORTF_IM_R |= Sw_Bits;         //enable interrupts for bits corresponding to Mask_Bits
 
-	    //NVIC Configuration
-	    //PortF interrupts correspond to interrupt 30 (EN0 and PRI7 registers)
-	    NVIC_EN0_R |= (1<<30);              //Interrupts enabled for port F
-	    NVIC_PRI7_R &= 0xFF3FFFFF;          //Interrupt Priority 1 to Port F
+		//NVIC Configuration
+		//PortF interrupts correspond to interrupt 30 (EN0 and PRI7 registers)
+		NVIC_EN0_R |= (1<<30);              //Interrupts enabled for port F
+		NVIC_PRI7_R &= 0xFF3FFFFF;          //Interrupt Priority 1 to Port F
 	}
 
-	void PWMConfig(void)
+	void UART_Config(void)
 	{
-	    SYSCTL_RCGCPWM_R |= (1<<1);     //Enable and provide a clock to PWM module 1
-	    GPIO_PORTF_AFSEL_R |= (1<<2);   //Enable Alternate function for PF2
-	    GPIO_PORTF_PCTL_R |= 0x500;     //Selecting PWM function for PF2 (Page 1351)
+		/*
+		*BRDI = integer part of the BRD; BRDF = fractional part
+		*BRD = BRDI + BRDF = UARTSysClk / (ClkDiv * Baud Rate)
+		*UARTSysClk = 16MHz, ClkDiv = 16, Baud Rate = 9600
+		*BRD = 104.167; BRDI = 104; BRDF = 167;
+		*UARTFBRD[DIVFRAC] = integer(BRDF * 64 + 0.5) = 11
+		*/
+		UART5_CTL_R &= (0<<0);                       //Disable UART module 5
+		UART5_IBRD_R = 104;
+		UART5_FBRD_R = 11;
+		UART5_CC_R = 0x00;                          //System Clock
+		UART5_LCRH_R = 0x62;                        //8 bit word length, FIFO enable, Parity Enable
+		UART5_CTL_R |= ((1<<0)|(1<<8)|(1<<9));      //Enable UART module 5
 
-	    PWM1_3_CTL_R |= 0x00;
-	    PWM1_3_GENA_R = 0x8C;          //Configure PWM Gen A such that PWMA is High when counter=LOAD and low when counter=CMPA when counting down
-	    PWM1_3_LOAD_R = time_period;
-	    PWM1_3_CMPA_R = (duty/100)*time_period - 1;
-	    PWM1_3_CTL_R |= 0x01;
-	    PWM1_ENABLE_R |= 0x040;
+		//UART interrupt configuration
+		UART5_IM_R &= ((0<<4)|(0<<5)|(0<<8));       //Mask Tx, Rx and Parity interrupts
+		UART5_ICR_R &= ((0<<4)|(0<<5)|(0<<8));      //Clear Tx, Rx and Parity interrupts
+		UART5_IM_R |= (1<<4);                       //Enable Rx interrupt
+		NVIC_EN1_R |= (1<<29);                      //Interrupts enabled for UART5
+		NVIC_PRI15_R &= 0xFFFF5FFF;                 //Interrupt Priority 2 to UART5
+
+		GPIO_PORTE_LOCK_R = 0x4C4F434B;     //Unlock PortE register
+		GPIO_PORTE_CR_R = 0xFF;             //Enable Commit function
+		GPIO_PORTE_DEN_R = 0xFF;            //Enable all pins on port E
+		GPIO_PORTE_DIR_R |= (1<<5);         //Define PE5 as output
+		GPIO_PORTE_AFSEL_R |= 0x30;         //Enable Alternate function for PE4 and PE5
+		//GPIO_PORTE_AMSEL_R = 0;
+		GPIO_PORTE_PCTL_R |= 0x00110000;    //Selecting UART function for PD6 and PD7
 	}
 
-	void GPIOF_Handler(void)
+	void PortF_Handler()
 	{
-	    one_switch();
+		GPIO_PORTF_IM_R &= ~Sw_Bits;
 
-	    int j;
-	    for(j = 0; j <1600*1000/4; j++){}           //Debounce Delay of 0.25seconds
-	}
-
-	void one_switch(void)
-	{
-	    GPIO_PORTF_IM_R &= ~Sw_Bits;
-
-	    STCURRENT = 0x00;                       //Reinitialise Systick Counter to Zero
-	    STRELOAD = (16*1000000);                //1 Second countdown
-	    STCTRL |= (ENABLE | INT_EN | Clk_SRC);  //Enable Systick, Enable Interrupt Generation, Enable system clock (80MHz) as source
-	}
-
-	void SysTick_Handler(void)
-	{
-	    STCTRL &= DISABLE;
-	    if((GPIO_PORTF_DATA_R) & (1<<4))        //Long Press
+		if(GPIO_PORTF_RIS_R & 0x10)         //Usr Sw 1
 		{
-		    if(duty > 5)
-		    {
-		        duty = duty - del_duty;         //Decrease duty
-		    }
+			UART5_DR_R = 0xF0;
 		}
-	    else                                    //Short Press
+		else if (GPIO_PORTF_RIS_R & 0x01)   //Usr Sw 2
 		{
-		    if(duty < 95)
-		    {
-		        duty = duty + del_duty;         //Increase duty
-		    }
+			UART5_DR_R = 0xAA;
 		}
-	    PWM1_3_CMPA_R = (time_period * duty) / 100;
-	    GPIO_PORTF_ICR_R = Sw_Bits;
-	    GPIO_PORTF_IM_R |= Sw_Bits;
+	}
+
+	void UART_Handler(void)
+	{
+		UART5_IM_R &= (0<<4);       //Mask UART Rx interrupt
+
+		if(UART5_FR_R & (1<<6))    //Rx flag register set (data recieved)
+		{
+			if(UART5_DR_R == 0xAA)
+			{
+				GPIO_PORTF_DATA_R = Green;
+			}
+			else if(UART5_DR_R == 0xF0)
+			{
+				GPIO_PORTF_DATA_R = Blue;
+			}
+		}
+
+		if(UART5_RSR_R & 0x0000000F)    //Any error detected
+		{
+			GPIO_PORTF_DATA_R = Red;
+		}
+
+		UART5_ECR_R &= 0xFFFFFFF0;        //Clear UART errors
+
+		STCURRENT=0x00;                         //Reinitialise Systick Counter to Zero
+		STRELOAD = 16*1000000/2;                //Run Systick for 0.5 second
+		STCTRL |= (ENABLE | INT_EN | Clk_SRC);  //Enable Systick, Enable Interrupt Generation, Enable system clock (80MHz) as source
+
+		GPIO_PORTF_ICR_R = Sw_Bits;
+	}
+
+	void Systick_Handler(void)
+	{
+		GPIO_PORTF_DATA_R &= 0x00;               //Turn off LED
+		//mask, clear and unmask gpio interrupt
+		GPIO_PORTF_ICR_R = Sw_Bits;
+		GPIO_PORTF_IM_R |= Sw_Bits;
+		UART5_IM_R |= (1<<4);                   //UnMask UART Rx interrupt
 	}
 
 ## Results:
-PWM signal generation is achieved on pin PF2 of the TM4C123GH6PM board, with user switch based duty cycle variation. The operation of the program is verified using an oscilloscope, and can also be verified based on the brightness of the LED.
-For two switch based application, it is seen that the PWM signal duty cycle indeed increases/decreases by 5% based on the switch pressed. For single switch application, the long press and short press are identified using a 1 second threshold, and it is seen that the duty cycle indeed increases by 5% on short press and decreases by 5% on long press of the user switch.
+The operation of above algorithm is verified by connecting the Tx and Rx pins of port E, hence allowing for testing of both transmission as well as reception functionality of the program. LED behaviour using interrupts and systick is also verified.
 
-<img src="images/EmbSys_Lab7_board_mod.jpg" alt="PWM signal on PF2" width="250"/>
+The transmit logic performs parallel-to-serial conversion on the data read from the transmit FIFO. The control logic outputs the serial bit stream beginning with a start bit and followed by the data bits (LSB first), parity bit, and the stop bits according to the programmed configuration in the control registers. This is verified as shown below:
 
-*PWM signal on PF2, as seen using the onboard LED*
+ * 0xAA is transmitted periodically from Tx pin, and captured on the oscilloscope.
+ * 0xAA is 10101010 in binary
+ * As the number of 1's in 10101010 is even, the parity bit should set to 1 to make the total number of 1's odd.
+ * A single stop bit (1/High) is sent along with the data.
+ * The data is sent LSB first, hence 01010101 is sent
+ * Hence, the waveform to be observed would be 01010101_1_1 (DataBits_ParityBit_StopBit)
 
-<img src="images/EmbSys_Lab7_50d_mod.jpg" alt="PWM signal on PF2 with default duty cycle of 50%" width="500"/>
+ <img src="images/uart_waveforms.jpeg" alt="Oscilloscope Waveform" width="250"/>
 
-*PWM signal on PF2 with default duty cycle of 50%*
+*0xAA transmitted and waveform captured on oscilloscope*
 
-<img src="images/EmbSys_Lab7_45d_mod.jpg" alt="PWM signal on PF2 with default duty cycle of 45%" width="500"/>
+It is seen that the transmitted is signal aligns with the theoretically calculated signal.
 
-*PWM signal on PF2 with decrease in duty cycle by 5%%*
+<img src="images/uart_blue.jpeg" alt="0xF0, Blue LED" width="250"/>
 
-<img src="images/EmbSys_Lab7_55d_mod.jpg" alt="PWM signal on PF2 with default duty cycle of 55%" width="500"/>
+*Pressing user switch 1, Tx and Rx of 0xF0, and glowing of Blue LED*
 
-*PWM signal on PF2 with increase in duty cycle by 5%*
+<img src="images/uart_green.jpeg" alt="0xAA, Green LED" width="250"/>
 
-Implementation of these tasks using dedicated PWM modules and interrupts ensures that the processor is not occupied polling the user switch pins, and thus allows it to carry out other tasks if necessary.
+*Pressing user switch 2, Tx and Rx of 0xAA, and glowing of Green LED*
+
+<img src="images/uart_red.jpeg" alt="Noise/Error, Red LED" width="250"/>
+
+*Recieving noise/error signal, and glowing of Red LED*
