@@ -1,4 +1,4 @@
-<mxfile host="Electron" modified="2023-11-10T11:45:51.446Z" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/22.0.3 Chrome/114.0.5735.289 Electron/25.8.4 Safari/537.36" etag="dbV4DRqCGHrvAfXbyOXj" version="22.0.3" type="device">
+<mxfile host="Electron" modified="2023-11-10T12:12:43.265Z" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/22.0.3 Chrome/114.0.5735.289 Electron/25.8.4 Safari/537.36" etag="nzIsBsc4XJFbxePCofW-" version="22.0.3" type="device">
   <diagram name="Page-1" id="E72ywOW6EHgyXk-NRn8P">
     <mxGraphModel dx="1024" dy="602" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
@@ -35,7 +35,7 @@
             <mxPoint x="460" y="230" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="FNUehLWvVww0V8AmYtab-9" value="&lt;b&gt;GPLL = True&lt;/b&gt;" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="FNUehLWvVww0V8AmYtab-3" target="FNUehLWvVww0V8AmYtab-4">
+        <mxCell id="FNUehLWvVww0V8AmYtab-9" value="&lt;b&gt;GPRMC = True&lt;/b&gt;" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="FNUehLWvVww0V8AmYtab-3" target="FNUehLWvVww0V8AmYtab-4">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
             <mxPoint x="399.71" y="410" as="sourcePoint" />
             <mxPoint x="399.71" y="490" as="targetPoint" />
@@ -60,7 +60,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="FNUehLWvVww0V8AmYtab-13" value="&lt;b&gt;GPGLL = False&lt;/b&gt;" style="curved=1;endArrow=classic;html=1;rounded=0;strokeWidth=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="FNUehLWvVww0V8AmYtab-3" target="FNUehLWvVww0V8AmYtab-1">
+        <mxCell id="FNUehLWvVww0V8AmYtab-13" value="&lt;b&gt;GPRMC = False&lt;/b&gt;" style="curved=1;endArrow=classic;html=1;rounded=0;strokeWidth=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="FNUehLWvVww0V8AmYtab-3" target="FNUehLWvVww0V8AmYtab-1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
             <mxPoint x="420" y="360" as="sourcePoint" />
             <mxPoint x="496" y="259" as="targetPoint" />
