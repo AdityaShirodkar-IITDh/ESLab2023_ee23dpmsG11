@@ -31,18 +31,10 @@ Hence, UART Module 5 is configured at 9600 Baud, 8 bits, no parity bit, 1 stop b
 * CodeComposerStudio serial monitor is set to same parameters (9600 Baud, 8 bits, no parity bit, 1 stop bit).
 
 ## StateFlow Diagram:
-```mermaid
-    graph TD;
-        A[Start] --> B[State = 0; gps_data=UART5_Rx]
-        B[State = 0; gps_data=UART5_Rx] --$=0--> A[Start]
-        B[State = 0; gps_data=UART5_Rx] --$=1--> C[State = 0; gps_data=UART5_Rx]
-        C[State = 0; gps_data=UART5_Rx] --GPLL=0--> A[Start]
-        C[State = 0; gps_data=UART5_Rx] --GPLL=1--> D[State = 2; gps_data=UART5_Rx]
-        D[State = 2; gps_data=UART5_Rx] --Validity = V--> A[Start]
-        D[State = 2; gps_data=UART5_Rx] --Validity = A--> E[UART0_Tx=gps_data]
-        E[UART0_Tx=gps_data] --UART0_Tx_Flag=1--> E[UART0_Tx=gps_data]
-        E[UART0_Tx=gps_data] --UART0_Tx_Flag=0--> A[Start]
-```
+<div style="text-align: center;">
+    <img src="GPS_StateFlow.png" alt="GPS_StateFlow"/>
+</div>
+
 
 ## Code:
         /*
